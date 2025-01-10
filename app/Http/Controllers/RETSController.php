@@ -1059,6 +1059,7 @@ public function retrieveData_ALLNEW()
         try {
             echo "Checking number of inactive properties..." . PHP_EOL;
             $inactivePropertiesCount = DB::table($properties_all_data)
+                ->where('mls_type', 0)
                 ->where('is_active', 0)
                 ->count();
 
@@ -1070,6 +1071,7 @@ public function retrieveData_ALLNEW()
 
             echo "Fetching inactive properties for deletion..." . PHP_EOL;
             $inactiveProperties = DB::table($properties_all_data)
+                ->where('mls_type', 0)
                 ->where('is_active', 0)
                 ->select('ListingKeyNumeric', 'UnparsedAddress', 'ListingId', 'ListPrice')
                 ->get();

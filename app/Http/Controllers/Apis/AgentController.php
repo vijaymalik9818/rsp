@@ -1334,7 +1334,7 @@ $result = $suggestedAgents->map(function($agent) {
                 'LeaseAmount'
             )
             ->where('featured', 1)
-            ->orderBy('DOMDate', 'desc')
+            ->orderBy('ModificationTimestamp', 'desc')
             ->take(8)
             ->get();
 
@@ -1368,7 +1368,7 @@ $result = $suggestedAgents->map(function($agent) {
                 'LeaseAmount'
             )
             ->where('diamond', 1)
-            ->orderBy('DOMDate', 'desc')
+            ->orderBy('ModificationTimestamp', 'desc')
             ->take(8)
             ->get();
 
@@ -1416,7 +1416,7 @@ $result = $suggestedAgents->map(function($agent) {
             $propertiesQuery->selectRaw('CAST(ListPrice AS DECIMAL(10, 2)) AS ListPriceNumeric');
 
             if ($sortBy == 'desc') {
-                $propertiesQuery->orderBy('DOMDate', 'desc');
+                $propertiesQuery->orderBy('ModificationTimestamp', 'desc');
             } elseif ($sortBy == 'price_low') {
                 $propertiesQuery->orderBy('ListPrice', 'asc');
             } elseif ($sortBy == 'price_high') {
@@ -1919,10 +1919,10 @@ $rawListingDataQuery = $listingDataQuery->toSql();
                     $listingDataQuery->orderBy('ListPrice', 'desc');
                     break;
                 case 'asc_dom':
-                    $listingDataQuery->orderBy('DOMDate', 'asc');
+                    $listingDataQuery->orderBy('ModificationTimestamp', 'desc');
                     break;
                 case 'desc_dom':
-                    $listingDataQuery->orderBy('DOMDate', 'desc');
+                    $listingDataQuery->orderBy('ModificationTimestamp', 'asc');
                     break;
                 default:
                     break;
@@ -1930,7 +1930,7 @@ $rawListingDataQuery = $listingDataQuery->toSql();
         } else {
             // Apply default sorting logic
             $listingDataQuery->orderByRaw("CASE WHEN featured = 1 THEN 0 ELSE 1 END")
-                             ->orderBy('DOMDate', 'desc');
+                             ->orderBy('ModificationTimestamp', 'desc');
         }
     }
 

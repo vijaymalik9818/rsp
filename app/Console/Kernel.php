@@ -11,6 +11,7 @@ class Kernel extends ConsoleKernel
      * Define the application's command schedule.
      */
     protected $commands = [
+        Commands\RetrieveBridgePropertyData::class,
         Commands\RetrievePropertyData::class,
         Commands\RetrieveMemberPropertyData::class,
         Commands\UpdateSlug::class,
