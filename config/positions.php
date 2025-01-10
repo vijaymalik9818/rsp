@@ -1,0 +1,1 @@
+<?phpdefine('TRADEMARK_SYMBOL', '®');return [    'positions' => [        'REALTOR' . TRADEMARK_SYMBOL,        'Broker',        'Sales Representative',    ]];

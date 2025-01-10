@@ -1,0 +1,133 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up()
+    {
+        Schema::create('properties_all_data', function (Blueprint $table) {
+            $table->id();
+            $table->text('ListingKeyNumeric')->nullable();
+            $table->text('BathroomsFull')->nullable();
+            $table->text('BathroomsHalf')->nullable();
+            $table->text('BathroomsTotaltext')->nullable();
+            $table->text('BedroomsTotal')->nullable();
+            $table->text('BelowGradeFinishedArea')->nullable();
+            $table->text('BelowGradeFinishedAreaUnits')->nullable();
+            $table->text('BuildingAreaTotal')->nullable();
+            $table->text('City')->nullable();
+            $table->text('CoListAgentFullName')->nullable();
+            $table->text('CoListAgentKeyNumeric')->nullable();
+            $table->text('CoListAgentEmail')->nullable();
+            $table->text('CoListAgentDirectPhone')->nullable();
+            $table->text('CoListOfficeName')->nullable();
+            $table->text('CoListOfficePhone')->nullable();
+            $table->text('Cooling')->nullable();
+            $table->text('CountyOrParish')->nullable();
+            $table->text('DaysOnMarket')->nullable();
+            $table->text('Heating')->nullable();
+            $table->text('Latitude')->nullable();
+            $table->text('ListAgentFullName')->nullable();
+            $table->text('ListAgentKeyNumeric')->nullable();
+            $table->text('ListAgentEmail')->nullable();
+            $table->text('ListAgentDirectPhone')->nullable();
+            $table->text('ListOfficeName')->nullable();
+            $table->text('ListOfficePhone')->nullable();
+            $table->text('ListPrice')->nullable();
+            $table->text('Longitude')->nullable();
+            $table->text('MlsStatus')->nullable();
+            $table->text('PropertySubType')->nullable();
+            $table->text('PropertyType')->nullable();
+            $table->text('PublicRemarks')->nullable();
+            $table->text('StandardStatus')->nullable();
+            $table->text('StateOrProvince')->nullable();
+            $table->text('StreetDirPrefix')->nullable();
+            $table->text('StreetDirSuffix')->nullable();
+            $table->text('StreetName')->nullable();
+            $table->text('StreetNumber')->nullable();
+            $table->text('StreetSuffix')->nullable();
+            $table->text('UnitNumber')->nullable();
+            $table->text('YearBuilt')->nullable();
+            $table->text('AccessibilityFeatures')->nullable();
+            $table->text('Appliances')->nullable();
+            $table->text('AssociationAmenities')->nullable();
+            $table->text('Basement')->nullable();
+            $table->text('BuilderName')->nullable();
+            $table->text('BusinessName')->nullable();
+            $table->text('CarportSpaces')->nullable();
+            $table->text('CommonWalls')->nullable();
+            $table->text('CommunityFeatures')->nullable();
+            $table->text('ConstructionMaterials')->nullable();
+            $table->text('ElementarySchoolDistrict')->nullable();
+            $table->text('ExteriorFeatures')->nullable();
+            $table->text('FireplaceFeatures')->nullable();
+            $table->text('FoundationDetails')->nullable();
+            $table->text('GarageSpaces')->nullable();
+            $table->text('HighSchoolDistrict')->nullable();
+            $table->text('InteriorFeatures')->nullable();
+            $table->text('LandLeaseAmount')->nullable();
+            $table->text('LeaseTerm')->nullable();
+            $table->text('Levels')->nullable();
+            $table->text('LotFeatures')->nullable();
+            $table->text('LotSizeAcres')->nullable();
+            $table->text('LotSizeSquareFeet')->nullable();
+            $table->text('ParkingFeatures')->nullable();
+            $table->text('PatioAndPorchFeatures')->nullable();
+            $table->text('PetsAllowed')->nullable();
+            $table->text('PoolFeatures')->nullable();
+            $table->text('RoomsTotal')->nullable();
+            $table->text('Sewer')->nullable();
+            $table->text('StructureType')->nullable();
+            $table->text('SubdivisionName')->nullable();
+            $table->text('TaxLegalDescription')->nullable();
+            $table->text('Utilities')->nullable();
+            $table->text('WaterfrontFeatures')->nullable();
+            $table->text('WaterSource')->nullable();
+            $table->text('YardSize')->nullable();
+            $table->text('Zoning')->nullable();
+            $table->text('BuildingAreaTotalMetres')->nullable();
+            $table->text('BuildingAreaTotalSF')->nullable();
+            $table->text('DOMIncrementing')->nullable();
+            $table->text('FootprintSQFT')->nullable();
+            $table->text('LotSizeNotCultivated')->nullable();
+            $table->text('LotSizeSeeded')->nullable();
+            $table->text('LotSizeTameHay')->nullable();
+            $table->text('LotSizeTreed')->nullable();
+            $table->text('LivingAreaMetres')->nullable();
+            $table->text('LivingAreaSF')->nullable();
+            $table->text('MainLevelFinishedAreaMetres')->nullable();
+            $table->text('MainLevelFinishedAreaSF')->nullable();
+            $table->text('UpperLevelFinishedAreaMetres')->nullable();
+            $table->text('UpperLevelFinishedAreaSF')->nullable();
+            $table->text('CondoName')->nullable();
+            $table->text('BedroomsBelowGrade')->nullable();
+            $table->text('CoListOfficeEmail')->nullable();
+            $table->text('ParkingEnclosed')->nullable();
+            $table->text('URL3DImage')->nullable();
+            $table->text('URLBrochure')->nullable();
+            $table->text('URLSoundByte')->nullable();
+            $table->text('FrontageFt')->nullable();
+            $table->text('HeatingExpense')->nullable();
+            $table->text('ListingContractDate')->nullable();
+            $table->text('ListingId')->nullable();
+            $table->text('ListingService')->nullable();
+            $table->text('InternetEntireListingDisplayYN')->nullable();
+            $table->text('OtherColumns')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('property');
+    }
+};
