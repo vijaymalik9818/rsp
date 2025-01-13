@@ -12,6 +12,7 @@ class Kernel extends ConsoleKernel
      */
     protected $commands = [
         Commands\RetrieveBridgePropertyData::class,
+        Commands\RetrieveBridgePropertyDataImages::class,
         Commands\RetrievePropertyData::class,
         Commands\RetrieveMemberPropertyData::class,
         Commands\UpdateSlug::class,

@@ -1308,6 +1308,7 @@ public function retrieveData_ALLNEW()
 
             do {
                 $officeProperties = DB::table('properties_all_data')
+                    ->where('mls_type', 0)
                     ->where('is_images_downloaded', 0)
                     ->orderBy('DOMDate', 'desc')
                     ->limit($chunkSize)

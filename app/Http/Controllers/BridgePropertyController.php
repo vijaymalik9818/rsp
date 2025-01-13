@@ -271,6 +271,101 @@ class BridgePropertyController extends Controller
         return json_decode($response, true);
     }
     
+
+    public function processBridgePropertyImages()
+    {
+        try {
+            $s3 = new S3Client([
+                'version' => 'latest',
+                'region' => env('AWS_DEFAULT_REGION'),
+                'credentials' => [
+                    'key' => env('AWS_ACCESS_KEY_ID'),
+                    'secret' => env('AWS_SECRET_ACCESS_KEY'),
+                ],
+            ]);
+    
+            // Fetch records where is_imported is 1
+            $properties = DB::table('bridge_property_images_json')
+                ->where('is_imported', 1)
+                ->get(['listing_id', 'images_json', 'last_processed_index']);
+    
+            $totalPropertiesCount = $properties->count();
+            $remainingCount = $totalPropertiesCount;
+    
+            foreach ($properties as $property) {
+                $listingId = $property->listing_id;
+                $imagesJson = json_decode($property->images_json, true);
+                $lastProcessedIndex = $property->last_processed_index ?? 0;
+    
+                if (empty($imagesJson)) {
+                    echo "ListingId {$listingId} has no images to process." . PHP_EOL;
+                    $remainingCount--;
+                    continue;
+                }
+    
+                $skipFirstImage = $lastProcessedIndex == 0; // Skip first image if starting fresh
+                $index = $lastProcessedIndex + 1;
+    
+                foreach (array_slice($imagesJson, $lastProcessedIndex) as $imageUrl) {
+                    if ($skipFirstImage) {
+                        $skipFirstImage = false;
+                        continue;
+                    }
+    
+                    try {
+                        $imageContent = file_get_contents($imageUrl);
+                        $filename = "photo-{$listingId}-{$index}.jpeg";
+                        $result = $s3->putObject([
+                            'Bucket' => env('AWS_BUCKET'),
+                            'Key' => "property-images/{$listingId}/{$filename}",
+                            'Body' => $imageContent,
+                        ]);
+    
+                        $imageUrlOnS3 = $result['ObjectURL'];
+    
+                        // Insert or update the image in the property_images table
+                        DB::table('property_images')->updateOrInsert(
+                            [
+                                'listingid' => $listingId,
+                                'image_url' => $imageUrlOnS3,
+                            ],
+                            [
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]
+                        );
+    
+                        echo "Index: {$index} :: Downloaded for ListingId {$listingId}" . PHP_EOL;
+    
+                        // Update last processed index in the database
+                        DB::table('bridge_property_images_json')
+                            ->where('listing_id', $listingId)
+                            ->update(['last_processed_index' => $index]);
+    
+                        $index++;
+                    } catch (\Exception $e) {
+                        echo "Error processing image for ListingId {$listingId} at Index {$index}: {$e->getMessage()}" . PHP_EOL;
+                        continue;
+                    }
+                }
+    
+                // Update the is_imported status to 2 for the processed listing_id
+                DB::table('bridge_property_images_json')
+                    ->where('listing_id', $listingId)
+                    ->update(['is_imported' => 2]);
+    
+                echo "TotalProperties: {$totalPropertiesCount} :: Remaining: {$remainingCount} :: Downloaded for ListingId {$listingId}" . PHP_EOL;
+    
+                $remainingCount--;
+            }
+    
+            echo "Processing completed for all properties." . PHP_EOL;
+    
+        } catch (\Exception $e) {
+            echo "Error: {$e->getMessage()}" . PHP_EOL;
+        }
+    }
+    
     
     
 }
