@@ -1072,6 +1072,7 @@ $result = $suggestedAgents->map(function($agent) {
                 'UnitNumber',
                 'ListPrice',
                 'BathroomsFull',
+                'BathroomsHalf',
                 'BedroomsTotal',
                 'BuildingAreaTotalSF',
                 DB::raw("CASE 
@@ -1108,6 +1109,7 @@ $result = $suggestedAgents->map(function($agent) {
                     'UnitNumber',
                     'ListPrice',
                     'BathroomsFull',
+                    'BathroomsHalf',
                     'BedroomsTotal',
                     'BuildingAreaTotalSF',
                     DB::raw("CASE 
@@ -1316,6 +1318,7 @@ $result = $suggestedAgents->map(function($agent) {
                 'UnitNumber',
                 'ListPrice',
                 'BathroomsFull',
+                'BathroomsHalf',
                 'BedroomsTotal',
                 'BuildingAreaTotalSF',
                 DB::raw("CASE 
@@ -1350,6 +1353,7 @@ $result = $suggestedAgents->map(function($agent) {
                 'UnitNumber',
                 'ListPrice',
                 'BathroomsFull',
+                'BathroomsHalf',
                 'BedroomsTotal',
                 'BuildingAreaTotalSF',
                 DB::raw("CASE 
@@ -1410,7 +1414,7 @@ $result = $suggestedAgents->map(function($agent) {
             $sortBy = $request->input('sort_by', 'desc');
 
             $propertiesQuery = DB::table('properties_all_data')
-                ->select('id', 'StreetNumber', 'StreetDirPrefix', 'UnparsedAddress', 'slug_url', 'StreetName', 'StreetSuffix', 'UnitNumber', 'ListPrice', 'BathroomsFull', 'BedroomsTotal', 'BuildingAreaTotalSF', 'PropertyType', 'City', 'ListingId', 'image_url', 'LivingAreaSF', 'LotSizeSquareFeet', 'StateOrProvince');
+                ->select('id', 'StreetNumber', 'StreetDirPrefix', 'UnparsedAddress', 'slug_url', 'StreetName', 'StreetSuffix', 'UnitNumber', 'ListPrice', 'BathroomsFull','BathroomsHalf', 'BedroomsTotal', 'BuildingAreaTotalSF', 'PropertyType', 'City', 'ListingId', 'image_url', 'LivingAreaSF', 'LotSizeSquareFeet', 'StateOrProvince');
 
             // Casting ListPrice as numeric for correct sorting
             $propertiesQuery->selectRaw('CAST(ListPrice AS DECIMAL(10, 2)) AS ListPriceNumeric');
@@ -1481,6 +1485,7 @@ public function getadvanceData(Request $request)
                 'UnitNumber',
                 'ListPrice',
                 'BathroomsFull',
+                'BathroomsHalf',
                 'BedroomsTotal',
                 'BuildingAreaTotalSF',
                 DB::raw("CASE 
@@ -1714,7 +1719,7 @@ $rawListingDataQuery = $listingDataQuery->toSql();
                 if ($searchKey === 'diamond') {
                     $mapDataQuery->where('diamond', 1);
                     $listingDataQuery->where('diamond', 1);
-                } elseif ($searchKey === 'featured') {
+                } elseif ($searchKey === 'exclusive') {
                     $mapDataQuery->where('featured', 1);
                     $listingDataQuery->where('featured', 1);
                 } else {
@@ -1985,7 +1990,7 @@ $rawListingDataQuery = $listingDataQuery->toSql();
             if ($city === 'diamond') {
                 $subdivisionsQuery->where('diamond', 1);
                 $propertiesQuery->where('diamond', 1);
-            } elseif ($city === 'featured') {
+            } elseif ($city === 'exclusive') {
                 $subdivisionsQuery->where('featured', 1);
                 $propertiesQuery->where('featured', 1);
             } else {
