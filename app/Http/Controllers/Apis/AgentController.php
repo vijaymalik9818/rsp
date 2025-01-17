@@ -300,9 +300,11 @@ class AgentController extends Controller
         
        if ($property) {    
         $images = DB::table('property_images')
-            ->where('listingid', $property->ListingKeyNumeric)
-            ->pluck('image_url')
-            ->toArray();
+    ->where('listingid', $property->ListingKeyNumeric)
+    ->orWhere('listingid', $property->ListingId)
+    ->pluck('image_url')
+    ->toArray();
+
     
         if (empty($images)) {
             $images[] = $property->image_url;

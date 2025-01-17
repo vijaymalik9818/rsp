@@ -573,7 +573,7 @@ class BridgePropertyController extends Controller
 
             // Fetch records where is_imported is 1
             $properties = DB::table('bridge_property_images_json')
-                ->where('is_imported', 1)
+                ->where('is_imported', 0)
                 ->get(['listing_id', 'images_json', 'last_processed_index']);
 
             $totalPropertiesCount = $properties->count();
