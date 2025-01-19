@@ -454,20 +454,20 @@ class BridgePropertyController extends Controller
                     }
                 }
     
-                // if ($firstImageUrl) {
-                //     $imageContents = file_get_contents($firstImageUrl);
-                //     $filename = "photo-$listingId-0.jpg";
-                //     $key = "property-images-first/{$listingId}/{$filename}";
-                //     $result = $s3->putObject([
-                //         'Bucket' => env('AWS_BUCKET'),
-                //         'Key' => $key,
-                //         'Body' => $imageContents,
-                //         'ContentType' => 'image/jpeg',
-                //     ]);
+                if ($firstImageUrl) {
+                    $imageContents = file_get_contents($firstImageUrl);
+                    $filename = "photo-$listingId-0.jpg";
+                    $key = "property-images-first/{$listingId}/{$filename}";
+                    $result = $s3->putObject([
+                        'Bucket' => env('AWS_BUCKET'),
+                        'Key' => $key,
+                        'Body' => $imageContents,
+                        'ContentType' => 'image/jpeg',
+                    ]);
     
-                //     $imageUrl = $result['ObjectURL'];
-                //     $mappedItem['image_url'] = $imageUrl;
-                // }
+                    $imageUrl = $result['ObjectURL'];
+                    $mappedItem['image_url'] = $imageUrl;
+                }
     
                 $imagesJson = json_encode($mediaUrls);
     
