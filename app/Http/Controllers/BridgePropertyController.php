@@ -237,6 +237,9 @@ class BridgePropertyController extends Controller
                 $existingRecord = DB::table('properties_all_data')->where('ListingId', $listingId)->first();
     
                 unset($item['Media']);
+
+                $mappedItem['ModificationTimestamp'] = (new \DateTime($item['ModificationTimestamp']))->format('Y-m-d H:i:s');
+
     
                 foreach ($mappedItem as $key => $value) {
                     if (is_array($value)) {
