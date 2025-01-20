@@ -1518,6 +1518,7 @@ public function getadvanceData(Request $request)
 
         $this->applyRangeFilters($request, $mapDataQuery, $listingDataQuery);
 
+        
         if ($request->filled('applies_filters')) {
             $appliedFilters = explode(',', $request->input('applies_filters'));
     
@@ -1653,6 +1654,11 @@ public function getadvanceData(Request $request)
         $totalCount = $listingDataQuery->count();
         $mapData = $mapDataQuery->take(200)->get();
         
+        $totalCountCriteria = $totalCount;
+        if ($totalCount > 1500) {
+            $listingDataQuery->limit(1500); 
+            $totalCountCriteria=1500;
+        }
         $listingData = $paginate
             ? $listingDataQuery->paginate($perPage)->appends($request->query())
             : $listingDataQuery->simplePaginate($perPage)->appends($request->query());
@@ -1665,8 +1671,14 @@ public function getadvanceData(Request $request)
                 'total_count' => $totalCount,
             ]);
         }
+
+
+
 $rawListingDataQuery = $listingDataQuery->toSql();
         $label = '';
+
+
+        
 
         // Bedroom filter
         if ($request->filled('min_bedrooms')) {
@@ -1693,16 +1705,31 @@ $rawListingDataQuery = $listingDataQuery->toSql();
             $label .= " in " . $community;
         }
 
+        
+
         // Combining counts and label
         $label = $totalCount . " " . $label;
+
+
+        if ($totalCount > 1500) {
+            $currentPage = $request->input('page', 1); // Get the current page from the request or default to 1
+            $perPage = $request->input('per_page', 20); // Default items per page is 20
+        
+            // Calculate the starting and ending range for the displayed items
+            $start = ($currentPage - 1) * $perPage + 1;
+            $end = min($start + $perPage - 1, 1500);
+        
+            $label = "$totalCount Listings Found | Showing $start-$end | Only 1500 properties may be displayed per search. To see all your results, try narrowing your search criteria.";
+        }
+        
 
         return response()->json([
             'message' => 'Data fetched successfully',
             'status' => 'success',
             'map_data' => $mapData,
-            'raw'=>$rawListingDataQuery,
+            'raw'=> $rawListingDataQuery,
             'listing_data' => $listingData,
-            'total_count' => $totalCount,
+            'total_count' => $totalCountCriteria,
             'label' => $label,
         ]);
     }

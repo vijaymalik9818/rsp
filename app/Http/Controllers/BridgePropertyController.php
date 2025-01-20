@@ -21,6 +21,8 @@ class BridgePropertyController extends Controller
         $cronTablename = 'properties_cron_log';
     
         $mappingKeys = [
+            'ModificationTimestamp' => 'ModificationTimestamp',
+
             'ListingKeyNumeric' => 'ListingKeyNumeric',
             'BathroomsFull' => 'BathroomsFull',
             'BathroomsHalf' => 'BathroomsHalf',
@@ -36,6 +38,7 @@ class BridgePropertyController extends Controller
             'Latitude' => 'Latitude',
             'ListAgentFullName' => 'ListAgentFullName',
             'ListAgentKeyNumeric' => 'ListAgentKeyNumeric',
+            'ListAgentDirectPhone' => 'ListAgentPreferredPhone',
             'ListAgentEmail' => 'ListAgentEmail',
             'ListOfficeName' => 'ListOfficeName',
             'ListOfficePhone' => 'ListOfficePhone',
@@ -283,6 +286,7 @@ class BridgePropertyController extends Controller
         $cronTablename = 'properties_cron_log';
     
         $mappingKeys = [
+            'ModificationTimestamp' => 'ModificationTimestamp',
             'ListingKeyNumeric' => 'ListingKeyNumeric',
             'BathroomsFull' => 'BathroomsFull',
             'BathroomsHalf' => 'BathroomsHalf',
@@ -301,6 +305,7 @@ class BridgePropertyController extends Controller
             'ListAgentEmail' => 'ListAgentEmail',
             'ListOfficeName' => 'ListOfficeName',
             'ListOfficePhone' => 'ListOfficePhone',
+            'ListAgentDirectPhone' => 'ListAgentPreferredPhone',
             'ListPrice' => 'ListPrice',
             'Longitude' => 'Longitude',
             'PropertySubType' => 'PropertySubType',
