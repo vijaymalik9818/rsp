@@ -510,6 +510,9 @@ class BridgePropertyController extends Controller
                         $mappedItem[$key] = $value;
                     }
                 }
+
+                $mappedItem['ModificationTimestamp'] = (new \DateTime($item['ModificationTimestamp']))->format('Y-m-d H:i:s');
+
     
                 if ($existingRecord) {
                     DB::table('properties_all_data')
