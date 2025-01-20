@@ -279,90 +279,40 @@ class AgentController extends Controller
             ], 404);
         }
     }
-      public function PropertyDetail($slugurl)
+    public function PropertyDetail($slugurl)
     {
         $isFavorite = null;
         $property = DB::table('properties_all_data')
             ->where('slug_url', $slugurl)
             ->orWhere('ListingId', $slugurl)
             ->first();
-        
-        // $property = DB::table('properties_all_data')
-        // ->selectRaw('*') // Select all columns
-        // ->selectRaw("CASE 
-        //                 WHEN `PropertySubtype` IN ('Apartment', 'Row/Townhouse') 
-        //                 THEN 'Condo' 
-        //                 ELSE `PropertyType` 
-        //              END AS PropertyType")
-        // ->where('slug_url', $slugurl)
-        // ->orWhere('ListingId', $slugurl)
-        // ->first();
-        
-       if ($property) {    
-        $images = DB::table('property_images')
-    ->where('listingid', $property->ListingKeyNumeric)
-    ->orWhere('listingid', $property->ListingId)
-    ->pluck('image_url')
-    ->toArray();
-
     
-        if (empty($images)) {
-            $images[] = $property->image_url;
-        }
-        $property->images = $images;
+        if ($property) {
+            $images = DB::table('property_images')
+                ->where('listingid', $property->ListingKeyNumeric)
+                ->orWhere('listingid', $property->ListingId)
+                ->pluck('image_url')
+                ->toArray();
     
-        $agentProfilePicture = DB::table('users')
-            ->where('agent_key', $property->ListAgentKeyNumeric)
-            ->value('profile_picture');
+            if ($property->mls_type == 1) {
+                // Add the property image_url as the first index
+                array_unshift($images, $property->image_url);
+            } elseif (empty($images)) {
+                $images[] = $property->image_url;
+            }
+            $property->images = $images;
+    
+            $agentProfilePicture = DB::table('users')
+                ->where('agent_key', $property->ListAgentKeyNumeric)
+                ->value('profile_picture');
             $property->agent_profile_picture = $agentProfilePicture ? $agentProfilePicture : null;
             $property->is_favorite = $isFavorite;
     
             $mainPropertyPrice = $property->ListPrice;
-            $minPrice = $mainPropertyPrice * 0.8; 
-            $maxPrice = $mainPropertyPrice * 1.2; 
-        //       $similarListings = DB::table('properties_all_data')
-        //     ->where('PropertyType', $property->PropertyType)
-        //     ->where('SubdivisionName', $property->SubdivisionName)
-        //     ->where('MlsStatus', $property->MlsStatus)
-        //     ->where('StreetDirSuffix', $property->StreetDirSuffix)
-        //     ->whereBetween('ListPrice', [$minPrice, $maxPrice])
-        //     ->where('ListingId', '!=', $property->ListingId)
-        //     ->orderBy('ListPrice', 'asc')
-        //     ->limit(4)
-        //     ->select(
-        //         'id',
-        //         'StreetNumber',
-        //         'StreetDirPrefix',
-        //         'UnparsedAddress',
-        //         'slug_url',
-        //         'StreetName',
-        //         'StreetSuffix',
-        //         'UnitNumber',
-        //         'ListPrice',
-        //         'BathroomsFull',
-        //         'BedroomsTotal',
-        //         'BuildingAreaTotalSF',
-        //         DB::raw("CASE 
-        //                     WHEN `PropertySubtype` IN ('Apartment', 'Row/Townhouse') 
-        //                     THEN 'Condo' 
-        //                     ELSE `PropertyType` 
-        //                  END AS PropertyType"),
-        //         'City',
-        //         'ListingId',
-        //         'image_url', // Ensure this column exists
-        //         'LivingAreaSF',
-        //         'LotSizeSquareFeet',
-        //         'StateOrProvince',
-        //         'LeaseMeasure',
-        //         'LeaseAmountFrequency',
-        //         'LeaseAmount',
-        //         'diamond',
-        //         'featured',
-        //         'StreetDirSuffix'
-        //     )
-        //     ->get();
-        
-        $similarListings = DB::table('properties_all_data')
+            $minPrice = $mainPropertyPrice * 0.8;
+            $maxPrice = $mainPropertyPrice * 1.2;
+    
+            $similarListings = DB::table('properties_all_data')
                 ->where('PropertyType', $property->PropertyType)
                 ->where('City', $property->City)
                 ->where('MlsStatus', $property->MlsStatus)
@@ -373,10 +323,9 @@ class AgentController extends Controller
                 ->limit(4)
                 ->get();
     
-       
-        $agent = DB::table('users')
-            ->where('name', $property->ListAgentFullName)
-            ->first();
+            $agent = DB::table('users')
+                ->where('name', $property->ListAgentFullName)
+                ->first();
     
         $agentSlug = $agent ? [
             'slug_url' => $agent->slug_url,
