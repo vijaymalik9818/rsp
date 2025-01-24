@@ -1674,17 +1674,26 @@ $rawListingDataQuery = $listingDataQuery->toSql();
         $communityMapping = config('communities');
     
             if (isset($communityMapping[$searchKey])) {
+
                 $communities = $communityMapping[$searchKey];
                 $mapDataQuery->whereIn('SubdivisionName', $communities);
                 $listingDataQuery->whereIn('SubdivisionName', $communities);
             } else {
+
                 if ($searchKey === 'diamond') {
                     $mapDataQuery->where('diamond', 1);
                     $listingDataQuery->where('diamond', 1);
                 } elseif ($searchKey === 'exclusive') {
                     $mapDataQuery->where('featured', 1);
                     $listingDataQuery->where('featured', 1);
-                } else {
+                }
+                elseif ($searchKey === 'edmonton') {
+
+                    $mapDataQuery->where('mls_type', 1);
+                    $listingDataQuery->where('mls_type', 1);
+                }
+                else {
+
                     $searchKeyFormatted = ucwords(str_replace('-', ' ', $request->input('search')));
                     $this->applyKeywordFilter($request, $searchKeyFormatted, $mapDataQuery, $listingDataQuery);
                 }
@@ -1962,7 +1971,13 @@ $rawListingDataQuery = $listingDataQuery->toSql();
             } elseif ($city === 'exclusive') {
                 $subdivisionsQuery->where('featured', 1);
                 $propertiesQuery->where('featured', 1);
-            } else {
+            }
+            elseif ($city === 'edmonton') {
+
+                $subdivisionsQuery->where('mls_type', 1);
+                $propertiesQuery->where('mls_type', 1);
+            }
+            else {
                 $subdivisionsQuery->where('City', $city);
                 $propertiesQuery->where('City', $city);
             }
