@@ -457,31 +457,31 @@ class BridgePropertyController extends Controller
                 $mediaUrls = [];
                 $firstImageUrl = null;
     
-                // if (isset($item['Media']) && is_array($item['Media'])) {
-                //     foreach ($item['Media'] as $index => $media) {
-                //         if (isset($media['MediaURL'])) {
-                //             if ($index == 0 && !$firstImageUrl) {
-                //                 $firstImageUrl = $media['MediaURL'];
-                //             }
-                //             $mediaUrls[] = $media['MediaURL'];
-                //         }
-                //     }
-                // }
+                if (isset($item['Media']) && is_array($item['Media'])) {
+                    foreach ($item['Media'] as $index => $media) {
+                        if (isset($media['MediaURL'])) {
+                            if ($index == 0 && !$firstImageUrl) {
+                                $firstImageUrl = $media['MediaURL'];
+                            }
+                            $mediaUrls[] = $media['MediaURL'];
+                        }
+                    }
+                }
     
-                // if ($firstImageUrl) {
-                //     $imageContents = file_get_contents($firstImageUrl);
-                //     $filename = "photo-$listingId-0.jpg";
-                //     $key = "property-images-first/{$listingId}/{$filename}";
-                //     $result = $s3->putObject([
-                //         'Bucket' => env('AWS_BUCKET'),
-                //         'Key' => $key,
-                //         'Body' => $imageContents,
-                //         'ContentType' => 'image/jpeg',
-                //     ]);
+                if ($firstImageUrl) {
+                    $imageContents = file_get_contents($firstImageUrl);
+                    $filename = "photo-$listingId-0.jpg";
+                    $key = "property-images-first/{$listingId}/{$filename}";
+                    $result = $s3->putObject([
+                        'Bucket' => env('AWS_BUCKET'),
+                        'Key' => $key,
+                        'Body' => $imageContents,
+                        'ContentType' => 'image/jpeg',
+                    ]);
     
-                //     $imageUrl = $result['ObjectURL'];
-                //     $mappedItem['image_url'] = $imageUrl;
-                // }
+                    $imageUrl = $result['ObjectURL'];
+                    $mappedItem['image_url'] = $imageUrl;
+                }
     
                 $imagesJson = json_encode($mediaUrls);
     
