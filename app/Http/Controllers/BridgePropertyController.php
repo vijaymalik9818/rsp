@@ -402,6 +402,9 @@ class BridgePropertyController extends Controller
     
         $totalCount = $response['total'];
         echo "Total properties to process: $totalCount\n";
+
+        $processedListingIds = []; // To keep track of API ListingIds
+
     
         for ($i = 0; ; $i++) {
             $offset = $i * $batchSize;
@@ -431,6 +434,9 @@ class BridgePropertyController extends Controller
             foreach ($data as $item) {
                 $listingId = $item['ListingId'];
                 $mappedItem = [];
+
+                $processedListingIds[] = $listingId;
+
     
                 foreach ($mappingKeys as $mappedKey => $apiKey) {
                     $mappedItem[$mappedKey] = $item[$apiKey] ?? null;
@@ -451,31 +457,31 @@ class BridgePropertyController extends Controller
                 $mediaUrls = [];
                 $firstImageUrl = null;
     
-                if (isset($item['Media']) && is_array($item['Media'])) {
-                    foreach ($item['Media'] as $index => $media) {
-                        if (isset($media['MediaURL'])) {
-                            if ($index == 0 && !$firstImageUrl) {
-                                $firstImageUrl = $media['MediaURL'];
-                            }
-                            $mediaUrls[] = $media['MediaURL'];
-                        }
-                    }
-                }
+                // if (isset($item['Media']) && is_array($item['Media'])) {
+                //     foreach ($item['Media'] as $index => $media) {
+                //         if (isset($media['MediaURL'])) {
+                //             if ($index == 0 && !$firstImageUrl) {
+                //                 $firstImageUrl = $media['MediaURL'];
+                //             }
+                //             $mediaUrls[] = $media['MediaURL'];
+                //         }
+                //     }
+                // }
     
-                if ($firstImageUrl) {
-                    $imageContents = file_get_contents($firstImageUrl);
-                    $filename = "photo-$listingId-0.jpg";
-                    $key = "property-images-first/{$listingId}/{$filename}";
-                    $result = $s3->putObject([
-                        'Bucket' => env('AWS_BUCKET'),
-                        'Key' => $key,
-                        'Body' => $imageContents,
-                        'ContentType' => 'image/jpeg',
-                    ]);
+                // if ($firstImageUrl) {
+                //     $imageContents = file_get_contents($firstImageUrl);
+                //     $filename = "photo-$listingId-0.jpg";
+                //     $key = "property-images-first/{$listingId}/{$filename}";
+                //     $result = $s3->putObject([
+                //         'Bucket' => env('AWS_BUCKET'),
+                //         'Key' => $key,
+                //         'Body' => $imageContents,
+                //         'ContentType' => 'image/jpeg',
+                //     ]);
     
-                    $imageUrl = $result['ObjectURL'];
-                    $mappedItem['image_url'] = $imageUrl;
-                }
+                //     $imageUrl = $result['ObjectURL'];
+                //     $mappedItem['image_url'] = $imageUrl;
+                // }
     
                 $imagesJson = json_encode($mediaUrls);
     
@@ -533,6 +539,19 @@ class BridgePropertyController extends Controller
                 break;
             }
         }
+
+
+
+        DB::table('bridge_property_images_json')
+            ->whereNotIn('listing_id', $processedListingIds)
+            ->delete();
+
+        DB::table('properties_all_data')
+            ->whereNotIn('ListingId', $processedListingIds)
+            ->where('mls_type', 1)
+            ->delete();
+
+
     
         DB::table($cronTablename)->where('id', $currLogId)->update([
             'steps_completed' => 2,
