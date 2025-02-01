@@ -1440,6 +1440,7 @@ public function getadvanceData(Request $request)
                 'BedroomsTotal',
                 'ListAgentFullName',
                 'ListOfficeName',
+                'ListOfficePhone',
                 'BuildingAreaTotalSF',
                 DB::raw("CASE 
                                 WHEN `PropertySubtype` IN ('Apartment', 'Row/Townhouse') 
