@@ -7,14 +7,14 @@ use Illuminate\Console\Command;
 use App\Http\Controllers\RETSController;
 use App\Http\Controllers\importListings\SoldImportlisting;
 
-class RetrieveBridgePropertyDataAllData extends Command
+class RemoveBridgeSoldPropertyData extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'command:importingBridgeDataAll';
+    protected $signature = 'command:removeSoldBridgeData';
 
     /**
      * The console command description.
@@ -41,9 +41,7 @@ class RetrieveBridgePropertyDataAllData extends Command
     public function handle()
     {
         $new = new BridgePropertyController();
-        $new->fetchRaeListings_bkup();
-        // $new->checkSoldAndRemoveSold();
-        
+        $new->checkSoldAndRemoveSold();
         return 0;
     }
 }

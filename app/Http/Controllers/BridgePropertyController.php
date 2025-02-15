@@ -15,11 +15,11 @@ class BridgePropertyController extends Controller
         $slugify = new Slugify();
         $accessToken = env('BRIDGE_ACCESS_TOKEN');
         $baseUrl = env('BRIDGE_LOGIN_URL');
-        $batchSize = 100;
-        $fileName = "RaeListingsCron.php";
+        $batchSize = 200;
+        $fileName = "RaeListingsCronBridge.php";
         $className = 'Listings';
         $cronTablename = 'properties_cron_log';
-    
+
         $mappingKeys = [
             'ModificationTimestamp' => 'ModificationTimestamp',
 
@@ -77,8 +77,8 @@ class BridgePropertyController extends Controller
             'UnparsedAddress' => 'UnparsedAddress',
             'UnitNumber' => 'UnitNumber',
         ];
-        
-    
+
+
         $currDate = date('Y-m-d H:i:s');
         $values = [
             'cron_file_name' => $fileName,
@@ -87,9 +87,9 @@ class BridgePropertyController extends Controller
             'mls_no' => 1,
             'steps_completed' => 1,
         ];
-    
+
         $currLogId = DB::table($cronTablename)->insertGetId($values);
-    
+
         $s3 = new S3Client([
             'version' => 'latest',
             'region' => env('AWS_DEFAULT_REGION'),
@@ -98,7 +98,7 @@ class BridgePropertyController extends Controller
                 'secret' => env('AWS_SECRET_ACCESS_KEY'),
             ],
         ]);
-    
+
         $lastCronData = DB::table($cronTablename)
             ->where("cron_file_name", $fileName)
             ->where("property_class", $className)
@@ -107,83 +107,83 @@ class BridgePropertyController extends Controller
             ->where("cron_end_time", "<>", "0000-00-00 00:00:00")
             ->orderBy("id", "DESC")
             ->first();
-    
+
         $startDate = null;
-    
+
         if (!$lastCronData) {
             echo "First execution: Fetching all data without timestamp filters.\n";
         } else {
             $startDate = $lastCronData->cron_end_time ?: date("Y-m-d H:i:s", strtotime('-1 month'));
             echo "Subsequent execution: Fetching data from $startDate to current date.\n";
         }
-    
+
         $endDate = $startDate ? date("Y-m-d H:i:s", strtotime('+1 month', strtotime($startDate))) : null;
         $countUrl = $baseUrl . "?access_token=$accessToken";
-    
+
         if ($startDate) {
             $countUrl .= "&ModificationTimestamp.gte=" . urlencode($startDate) .
                 "&ModificationTimestamp.lte=" . urlencode($endDate);
         }
-    
+
         echo "Checking total properties count with URL: $countUrl\n";
         $response = $this->makeCurlRequest($countUrl, $accessToken);
-    
+
         if (!$response || !isset($response['total'])) {
             echo "Error fetching total count from the API.\n";
             return;
         }
-    
+
         $totalCount = $response['total'];
         echo "Total properties to process: $totalCount\n";
-    
+
         for ($i = 0; ; $i++) {
             $offset = $i * $batchSize;
             $currUrl = $baseUrl . "?access_token=$accessToken";
-    
+
             if ($startDate) {
                 $currUrl .= "&ModificationTimestamp.gte=" . urlencode($startDate) .
                     "&ModificationTimestamp.lte=" . urlencode($endDate);
             }
-    
+
             $currUrl .= "&limit=$batchSize&offset=$offset";
             echo "Fetching batch " . ($i + 1) . ": $currUrl\n";
             $response = $this->makeCurlRequest($currUrl, $accessToken);
-    
+
             if (!$response || !isset($response['bundle'])) {
                 echo "Error fetching data from the API.\n";
                 break;
             }
-    
+
             $data = $response['bundle'];
-    
+
             if (empty($data)) {
                 echo "No more data in this batch.\n";
                 break;
             }
-    
+
             foreach ($data as $item) {
                 $listingId = $item['ListingId'];
                 $mappedItem = [];
-    
+
                 foreach ($mappingKeys as $mappedKey => $apiKey) {
                     $mappedItem[$mappedKey] = $item[$apiKey] ?? null;
                 }
-                
-    
+
+
                 $unmappedKeys = array_diff_key($item, $mappedItem);
                 $mappedItem['otherColumns'] = json_encode($unmappedKeys);
                 $mappedItem['mls_type'] = 1;
-    
+
                 if ($item['UnparsedAddress'] == null || $item['UnparsedAddress'] == '') {
                     $mappedItem['slug_url'] = null;
                 } else {
                     $slug_url = $slugify->slugify($item['UnparsedAddress'] . '-' . $item['ListingId']);
                     $mappedItem['slug_url'] = $slug_url;
                 }
-    
+
                 $mediaUrls = [];
                 $firstImageUrl = null;
-    
+
                 if (isset($item['Media']) && is_array($item['Media'])) {
                     foreach ($item['Media'] as $index => $media) {
                         if (isset($media['MediaURL'])) {
@@ -194,7 +194,7 @@ class BridgePropertyController extends Controller
                         }
                     }
                 }
-    
+
                 if ($firstImageUrl) {
                     $imageContents = file_get_contents($firstImageUrl);
                     $filename = "photo-$listingId-0.jpg";
@@ -205,15 +205,15 @@ class BridgePropertyController extends Controller
                         'Body' => $imageContents,
                         'ContentType' => 'image/jpeg',
                     ]);
-    
+
                     $imageUrl = $result['ObjectURL'];
                     $mappedItem['image_url'] = $imageUrl;
                 }
-    
+
                 $imagesJson = json_encode($mediaUrls);
-    
+
                 $existingMediaRecord = DB::table('bridge_property_images_json')->where('listing_id', $listingId)->first();
-    
+
                 if ($existingMediaRecord) {
                     DB::table('bridge_property_images_json')
                         ->where('listing_id', $listingId)
@@ -233,14 +233,14 @@ class BridgePropertyController extends Controller
                     ]);
                     echo "Media for ListingId $listingId inserted.\n";
                 }
-    
+
                 $existingRecord = DB::table('properties_all_data')->where('ListingId', $listingId)->first();
-    
+
                 unset($item['Media']);
 
                 $mappedItem['ModificationTimestamp'] = (new \DateTime($item['ModificationTimestamp']))->format('Y-m-d H:i:s');
 
-    
+
                 foreach ($mappedItem as $key => $value) {
                     if (is_array($value)) {
                         $mappedItem[$key] = empty($value) ? null : implode(',', $value);
@@ -250,7 +250,7 @@ class BridgePropertyController extends Controller
                         $mappedItem[$key] = $value;
                     }
                 }
-    
+
                 if ($existingRecord) {
                     DB::table('properties_all_data')
                         ->where('ListingId', $listingId)
@@ -261,21 +261,21 @@ class BridgePropertyController extends Controller
                     echo "ListingId $listingId created\n";
                 }
             }
-    
+
             if ($offset + $batchSize >= $totalCount) {
                 echo "All properties processed.\n";
                 break;
             }
         }
-    
+
         DB::table($cronTablename)->where('id', $currLogId)->update([
             'steps_completed' => 2,
-            'success' => 0,
+            'success' => 1,
             'cron_end_time' => date('Y-m-d H:i:s'),
         ]);
         echo "Cron job completed.\n";
     }
-    
+
 
     public function fetchRaeListings_bkup()
     {
@@ -287,7 +287,7 @@ class BridgePropertyController extends Controller
         $fileName = "RaeListingsCron.php";
         $className = 'Listings';
         $cronTablename = 'properties_cron_log';
-    
+
         $mappingKeys = [
             'ModificationTimestamp' => 'ModificationTimestamp',
             'ListingKeyNumeric' => 'ListingKeyNumeric',
@@ -344,8 +344,8 @@ class BridgePropertyController extends Controller
             'UnparsedAddress' => 'UnparsedAddress',
             'UnitNumber' => 'UnitNumber',
         ];
-        
-    
+
+
         $currDate = date('Y-m-d H:i:s');
         $values = [
             'cron_file_name' => $fileName,
@@ -354,9 +354,9 @@ class BridgePropertyController extends Controller
             'mls_no' => 1,
             'steps_completed' => 1,
         ];
-    
+
         $currLogId = DB::table($cronTablename)->insertGetId($values);
-    
+
         $s3 = new S3Client([
             'version' => 'latest',
             'region' => env('AWS_DEFAULT_REGION'),
@@ -365,7 +365,7 @@ class BridgePropertyController extends Controller
                 'secret' => env('AWS_SECRET_ACCESS_KEY'),
             ],
         ]);
-    
+
         $lastCronData = DB::table($cronTablename)
             ->where("cron_file_name", $fileName)
             ->where("property_class", $className)
@@ -374,89 +374,89 @@ class BridgePropertyController extends Controller
             ->where("cron_end_time", "<>", "0000-00-00 00:00:00")
             ->orderBy("id", "DESC")
             ->first();
-    
+
         $startDate = null;
-    
+
         // if (!$lastCronData) {
         //     echo "First execution: Fetching all data without timestamp filters.\n";
         // } else {
         //     $startDate = $lastCronData->cron_end_time ?: date("Y-m-d H:i:s", strtotime('-1 month'));
         //     echo "Subsequent execution: Fetching data from $startDate to current date.\n";
         // }
-    
+
         // $endDate = $startDate ? date("Y-m-d H:i:s", strtotime('+1 month', strtotime($startDate))) : null;
         $countUrl = $baseUrl . "?access_token=$accessToken";
-    
+
         // if ($startDate) {
         //     $countUrl .= "&ModificationTimestamp.gte=" . urlencode($startDate) .
         //         "&ModificationTimestamp.lte=" . urlencode($endDate);
         // }
-    
+
         echo "Checking total properties count with URL: $countUrl\n";
         $response = $this->makeCurlRequest($countUrl, $accessToken);
-    
+
         if (!$response || !isset($response['total'])) {
             echo "Error fetching total count from the API.\n";
             return;
         }
-    
+
         $totalCount = $response['total'];
         echo "Total properties to process: $totalCount\n";
 
         $processedListingIds = []; // To keep track of API ListingIds
 
-    
+
         for ($i = 0; ; $i++) {
             $offset = $i * $batchSize;
             $currUrl = $baseUrl . "?access_token=$accessToken";
-    
+
             // if ($startDate) {
             //     $currUrl .= "&ModificationTimestamp.gte=" . urlencode($startDate) .
             //         "&ModificationTimestamp.lte=" . urlencode($endDate);
             // }
-    
+
             $currUrl .= "&limit=$batchSize&offset=$offset";
             echo "Fetching batch " . ($i + 1) . ": $currUrl\n";
             $response = $this->makeCurlRequest($currUrl, $accessToken);
-    
+
             if (!$response || !isset($response['bundle'])) {
                 echo "Error fetching data from the API.\n";
                 break;
             }
-    
+
             $data = $response['bundle'];
-    
+
             if (empty($data)) {
                 echo "No more data in this batch.\n";
                 break;
             }
-    
+
             foreach ($data as $item) {
                 $listingId = $item['ListingId'];
                 $mappedItem = [];
 
                 $processedListingIds[] = $listingId;
 
-    
+
                 foreach ($mappingKeys as $mappedKey => $apiKey) {
                     $mappedItem[$mappedKey] = $item[$apiKey] ?? null;
                 }
-                
-    
+
+
                 $unmappedKeys = array_diff_key($item, $mappedItem);
                 $mappedItem['otherColumns'] = json_encode($unmappedKeys);
                 $mappedItem['mls_type'] = 1;
-    
+
                 if ($item['UnparsedAddress'] == null || $item['UnparsedAddress'] == '') {
                     $mappedItem['slug_url'] = null;
                 } else {
                     $slug_url = $slugify->slugify($item['UnparsedAddress'] . '-' . $item['ListingId']);
                     $mappedItem['slug_url'] = $slug_url;
                 }
-    
+
                 $mediaUrls = [];
                 $firstImageUrl = null;
-    
+
                 if (isset($item['Media']) && is_array($item['Media'])) {
                     foreach ($item['Media'] as $index => $media) {
                         if (isset($media['MediaURL'])) {
@@ -467,7 +467,7 @@ class BridgePropertyController extends Controller
                         }
                     }
                 }
-    
+
                 if ($firstImageUrl) {
                     $imageContents = file_get_contents($firstImageUrl);
                     $filename = "photo-$listingId-0.jpg";
@@ -478,15 +478,15 @@ class BridgePropertyController extends Controller
                         'Body' => $imageContents,
                         'ContentType' => 'image/jpeg',
                     ]);
-    
+
                     $imageUrl = $result['ObjectURL'];
                     $mappedItem['image_url'] = $imageUrl;
                 }
-    
+
                 $imagesJson = json_encode($mediaUrls);
-    
+
                 $existingMediaRecord = DB::table('bridge_property_images_json')->where('listing_id', $listingId)->first();
-    
+
                 if ($existingMediaRecord) {
                     DB::table('bridge_property_images_json')
                         ->where('listing_id', $listingId)
@@ -505,11 +505,11 @@ class BridgePropertyController extends Controller
                     ]);
                     echo "Media for ListingId $listingId inserted.\n";
                 }
-    
+
                 $existingRecord = DB::table('properties_all_data')->where('ListingId', $listingId)->first();
-    
+
                 unset($item['Media']);
-    
+
                 foreach ($mappedItem as $key => $value) {
                     if (is_array($value)) {
                         $mappedItem[$key] = empty($value) ? null : implode(',', $value);
@@ -522,7 +522,7 @@ class BridgePropertyController extends Controller
 
                 $mappedItem['ModificationTimestamp'] = (new \DateTime($item['ModificationTimestamp']))->format('Y-m-d H:i:s');
 
-    
+
                 if ($existingRecord) {
                     DB::table('properties_all_data')
                         ->where('ListingId', $listingId)
@@ -533,7 +533,7 @@ class BridgePropertyController extends Controller
                     echo "ListingId $listingId created\n";
                 }
             }
-    
+
             if ($offset + $batchSize >= $totalCount) {
                 echo "All properties processed.\n";
                 break;
@@ -552,7 +552,7 @@ class BridgePropertyController extends Controller
             ->delete();
 
 
-    
+
         DB::table($cronTablename)->where('id', $currLogId)->update([
             'steps_completed' => 2,
             'success' => 0,
@@ -682,6 +682,97 @@ class BridgePropertyController extends Controller
         } catch (\Exception $e) {
             echo "Error: {$e->getMessage()}" . PHP_EOL;
         }
+    }
+
+
+    public function checkSoldAndRemoveSold()
+    {
+        date_default_timezone_set('America/New_York');
+
+        $accessToken = env('BRIDGE_ACCESS_TOKEN');
+        $baseUrl = env('BRIDGE_LOGIN_URL');
+        $batchSize = 200;
+        $fileName = "BridgeListingsCronRemoveSold.php";
+        $className = 'Listings';
+        $cronTablename = 'properties_cron_log';
+        $currDate = date('Y-m-d H:i:s');
+
+        
+        $values = [
+            'cron_file_name' => $fileName,
+            'cron_start_time' => $currDate,
+            'property_class' => $className,
+            'mls_no' => 1,
+            'steps_completed' => 1,
+        ];
+
+        $currLogId = DB::table($cronTablename)->insertGetId($values);
+
+        
+        $countUrl = $baseUrl . "?access_token=$accessToken&fields=ListingId";
+        echo "Checking total properties count with URL: $countUrl\n";
+
+        $response = $this->makeCurlRequest($countUrl, $accessToken);
+        if (!$response || !isset($response['total'])) {
+            echo "Error fetching total count from the API.\n";
+            return;
+        }
+
+        $totalCount = $response['total'];
+        echo "Total properties to process: $totalCount\n";
+        // exit;
+
+        $processedListingIds = [];
+
+        
+        $offset = 0;
+        for ($i = 0; $offset < $totalCount; $i++, $offset += $batchSize) {
+            $currUrl = $baseUrl . "?access_token=$accessToken&fields=ListingId&limit=$batchSize&offset=$offset";
+            echo "Fetching batch " . ($i + 1) . ": $currUrl\n";
+
+            $response = $this->makeCurlRequest($currUrl, $accessToken);
+            if (!$response || !isset($response['bundle'])) {
+                echo "Error fetching data from the API.\n";
+                break;
+            }
+
+            $data = $response['bundle'];
+
+            
+            foreach ($data as $listing) {
+                if (!empty($listing['ListingId'])) {
+                    $processedListingIds[] = $listing['ListingId'];
+                }
+            }
+        }
+
+        
+        if (!empty($processedListingIds)) {
+
+            // dd($processedListingIds);
+            DB::table('bridge_property_images_json')
+                ->whereNotIn('listing_id', $processedListingIds)
+                ->delete();
+
+            DB::table('properties_all_data')
+                ->whereNotIn('ListingId', $processedListingIds)
+                ->where('mls_type', 1)
+                ->delete();
+
+            echo "Records cleaned successfully.\n";
+        } else {
+            echo "No valid ListingIds processed.\n";
+        }
+
+        
+        DB::table($cronTablename)
+            ->where('id', $currLogId)
+            ->update([
+                'cron_end_time' => date('Y-m-d H:i:s'),
+                'steps_completed' => 2,
+            ]);
+
+        echo "Cron job completed successfully.\n";
     }
 
 
