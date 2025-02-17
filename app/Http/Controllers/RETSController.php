@@ -41,7 +41,7 @@ class RETSController extends Controller
         $rets = new Session($config);
 
         $properties_all_data = 'properties_all_data';
-        $file_name = "RetsController.php";
+        $file_name = "RetsControllerNew.php";
         $curr_mls_id = 1;
 
         try {
