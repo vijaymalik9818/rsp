@@ -774,9 +774,6 @@ class BridgePropertyController extends Controller
 
         echo "Cron job completed successfully.\n";
     }
-
-
-
 }
 
 

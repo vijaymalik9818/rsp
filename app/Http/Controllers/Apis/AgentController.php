@@ -1290,7 +1290,7 @@ $result = $suggestedAgents->map(function($agent) {
             ->whereExists(function ($query) {
                 $query->select(DB::raw(1))
                     ->from('property_images')
-                    ->whereRaw('property_images.ListingId = properties_all_data.ListingKeyNumeric');
+                    ->whereRaw('property_images.ListingId = properties_all_data.ListingKeyNumeric OR property_images.ListingId = properties_all_data.ListingId');
             })
             ->where('featured', 1)
             ->orderBy('ModificationTimestamp', 'desc')
@@ -1330,7 +1330,7 @@ $result = $suggestedAgents->map(function($agent) {
             ->whereExists(function ($query) {
                 $query->select(DB::raw(1))
                     ->from('property_images')
-                    ->whereRaw('property_images.ListingId = properties_all_data.ListingKeyNumeric');
+                    ->whereRaw('property_images.ListingId = properties_all_data.ListingKeyNumeric OR property_images.ListingId = properties_all_data.ListingId');
             })
             ->where('diamond', 1)
             ->orderBy('ModificationTimestamp', 'desc')
@@ -1436,7 +1436,7 @@ public function getadvanceData(Request $request)
             ->whereExists(function ($query) {
                 $query->select(DB::raw(1))
                     ->from('property_images')
-                    ->whereRaw('property_images.ListingId = properties_all_data.ListingKeyNumeric');
+                    ->whereRaw('property_images.ListingId = properties_all_data.ListingKeyNumeric OR property_images.ListingId = properties_all_data.ListingId');
             });
 
         $listingDataQuery = DB::table('properties_all_data')
@@ -1480,8 +1480,8 @@ public function getadvanceData(Request $request)
             ) ->whereExists(function ($query) {
                 $query->select(DB::raw(1))
                     ->from('property_images')
-                    ->whereRaw('property_images.ListingId = properties_all_data.ListingKeyNumeric');
-            });
+                    ->whereRaw('property_images.ListingId = properties_all_data.ListingKeyNumeric OR property_images.ListingId = properties_all_data.ListingId');
+                });
 
         if ($request->filled('search')) {
             $this->applySearchFilter($request, $mapDataQuery, $listingDataQuery);
