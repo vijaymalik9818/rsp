@@ -2127,54 +2127,56 @@ usort($propertyTypes, function ($a, $b) use ($desiredOrder) {
     
         // Optimized query with DISTINCT applied correctly
         $results = DB::table('properties_all_data')
+            ->join('property_images', function ($join) {
+                $join->on('property_images.ListingId', '=', 'properties_all_data.ListingKeyNumeric');
+            })
             ->where(function ($query) use ($key) {
-                $query->where('ListingId', 'like', '%' . $key . '%')
-                    ->orWhere('UnparsedAddress', 'like', '%' . $key . '%')
-                    ->orWhere('City', 'like', '%' . $key . '%')
-                    ->orWhere('StateOrProvince', 'like', '%' . $key . '%')
-                    ->orWhere('PostalCode', 'like', '%' . $key . '%');
+                $query->where('properties_all_data.ListingId', 'like', '%' . $key . '%')
+                    ->orWhere('properties_all_data.UnparsedAddress', 'like', '%' . $key . '%')
+                    ->orWhere('properties_all_data.City', 'like', '%' . $key . '%')
+                    ->orWhere('properties_all_data.StateOrProvince', 'like', '%' . $key . '%')
+                    ->orWhere('properties_all_data.PostalCode', 'like', '%' . $key . '%');
             })
             ->distinct()
             ->select(
-                'ListingId',
-                DB::raw('CONCAT(ListingId, " - ", UnparsedAddress) as mls_id_address'),
+                'properties_all_data.ListingId',
+                DB::raw('CONCAT(properties_all_data.ListingId, " - ", properties_all_data.UnparsedAddress) as mls_id_address'),
                 DB::raw('CONCAT(
-                    TRIM(COALESCE(UnparsedAddress, "")), 
+                    TRIM(COALESCE(properties_all_data.UnparsedAddress, "")), 
                     ", ", 
-                    TRIM(COALESCE(City, "")), 
+                    TRIM(COALESCE(properties_all_data.City, "")), 
                     ", ", 
-                    TRIM(COALESCE(StateOrProvince, "")), 
+                    TRIM(COALESCE(properties_all_data.StateOrProvince, "")), 
                     ", ", 
-                    TRIM(COALESCE(PostalCode, ""))
+                    TRIM(COALESCE(properties_all_data.PostalCode, ""))
                 ) as full_address'),
-                'slug_url'
+                'properties_all_data.slug_url'
             )
             ->take(5)
             ->get();
     
         // Extract the results into separate collections
-    // Extract the results into separate collections
-    $listingIds = $results->pluck('ListingId')->filter()->unique()->take(5);
-    $mls_ids_with_address = $results->pluck('mls_id_address')->filter()->unique()->take(5);
-    $fullAddress = $results->pluck('full_address')->filter()->unique()->take(5);
-    $slugUrls = $results->pluck('slug_url')->filter()->unique()->take(5);
-
-    // Prepare the response array
-    $suggestedAgents = [
-        'listingIds' => $listingIds,
-        'mls_ids' => $mls_ids_with_address,
-        'fullAddress' => $fullAddress,
-        'slug_urls' => $slugUrls,
-    ];
-
-    // Check if all arrays are empty
-    if ($suggestedAgents['listingIds']->isEmpty() && $suggestedAgents['mls_ids']->isEmpty() && $suggestedAgents['fullAddress']->isEmpty() && $suggestedAgents['slug_urls']->isEmpty()) {
-        return response()->json(['message' => 'No Results found for the provided key.'], 404);
+        $listingIds = $results->pluck('ListingId')->filter()->unique()->take(5);
+        $mls_ids_with_address = $results->pluck('mls_id_address')->filter()->unique()->take(5);
+        $fullAddress = $results->pluck('full_address')->filter()->unique()->take(5);
+        $slugUrls = $results->pluck('slug_url')->filter()->unique()->take(5);
+    
+        // Prepare the response array
+        $suggestedAgents = [
+            'listingIds' => $listingIds,
+            'mls_ids' => $mls_ids_with_address,
+            'fullAddress' => $fullAddress,
+            'slug_urls' => $slugUrls,
+        ];
+    
+        // Check if all arrays are empty
+        if ($suggestedAgents['listingIds']->isEmpty() && $suggestedAgents['mls_ids']->isEmpty() && $suggestedAgents['fullAddress']->isEmpty() && $suggestedAgents['slug_urls']->isEmpty()) {
+            return response()->json(['message' => 'No Results found for the provided key.'], 404);
+        }
+    
+        return response()->json(['suggested_agents' => $suggestedAgents], 200);
     }
-
-    return response()->json(['suggested_agents' => $suggestedAgents], 200);
-}
-
+    
     public function agentslug(Request $request)
     {
         $name = $request->input('agent_name');
