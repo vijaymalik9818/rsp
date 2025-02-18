@@ -212,26 +212,26 @@ class BridgePropertyController extends Controller
 
                 $imagesJson = json_encode($mediaUrls);
 
-                $existingMediaRecord = DB::table('bridge_property_images_json')->where('listing_id', $listingId)->first();
+                $existingMediaRecord = DB::table('bridge_property_images_json')->where('listing_id', $item['ListingKeyNumeric'])->first();
 
                 if ($existingMediaRecord) {
                     DB::table('bridge_property_images_json')
-                        ->where('listing_id', $listingId)
+                        ->where('listing_id', $item['ListingKeyNumeric'])
                         ->update([
                             'images_json' => $imagesJson,
                             'is_imported' => 1,
                             'updated_at' => now(),
                         ]);
-                    echo "Media for ListingId $listingId updated.\n";
+                    echo "Media for ListingId" . $item['ListingKeyNumeric'] . "updated.\n";
                 } else {
                     DB::table('bridge_property_images_json')->insert([
-                        'listing_id' => $listingId,
+                        'listing_id' => $item['ListingKeyNumeric'],
                         'images_json' => $imagesJson,
                         'is_imported' => 0,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
-                    echo "Media for ListingId $listingId inserted.\n";
+                    echo "Media for ListingId " . $item['ListingKeyNumeric'] . " inserted.\n";
                 }
 
                 $existingRecord = DB::table('properties_all_data')->where('ListingId', $listingId)->first();
@@ -697,7 +697,7 @@ class BridgePropertyController extends Controller
         $cronTablename = 'properties_cron_log';
         $currDate = date('Y-m-d H:i:s');
 
-        
+
         $values = [
             'cron_file_name' => $fileName,
             'cron_start_time' => $currDate,
@@ -708,7 +708,7 @@ class BridgePropertyController extends Controller
 
         $currLogId = DB::table($cronTablename)->insertGetId($values);
 
-        
+
         $countUrl = $baseUrl . "?access_token=$accessToken&fields=ListingId";
         echo "Checking total properties count with URL: $countUrl\n";
 
@@ -724,7 +724,7 @@ class BridgePropertyController extends Controller
 
         $processedListingIds = [];
 
-        
+
         $offset = 0;
         for ($i = 0; $offset < $totalCount; $i++, $offset += $batchSize) {
             $currUrl = $baseUrl . "?access_token=$accessToken&fields=ListingId&limit=$batchSize&offset=$offset";
@@ -738,7 +738,7 @@ class BridgePropertyController extends Controller
 
             $data = $response['bundle'];
 
-            
+
             foreach ($data as $listing) {
                 if (!empty($listing['ListingId'])) {
                     $processedListingIds[] = $listing['ListingId'];
@@ -746,7 +746,7 @@ class BridgePropertyController extends Controller
             }
         }
 
-        
+
         if (!empty($processedListingIds)) {
 
             // dd($processedListingIds);
@@ -764,7 +764,7 @@ class BridgePropertyController extends Controller
             echo "No valid ListingIds processed.\n";
         }
 
-        
+
         DB::table($cronTablename)
             ->where('id', $currLogId)
             ->update([
@@ -774,6 +774,66 @@ class BridgePropertyController extends Controller
 
         echo "Cron job completed successfully.\n";
     }
+
+
+
+    public function updateListingIdsInBatches()
+    {
+        DB::beginTransaction();
+        try {
+            // Step 1: Fetch the mapping of ListingId → ListingKeyNumeric from properties_all_data
+            $listingsMap = DB::table('properties_all_data')
+                ->pluck('ListingKeyNumeric', 'ListingId'); // Key = ListingId, Value = ListingKeyNumeric
+
+            if ($listingsMap->isEmpty()) {
+                throw new \Exception("No matching records found in properties_all_data.");
+            }
+
+            $listingIds = $listingsMap->keys(); // Get all ListingIds that need updating
+            $totalRecords = count($listingIds);
+            $batchSize = 200;
+
+            echo "Total Records to Update: $totalRecords\n";
+
+            // Step 2: Process in batches of 200
+            for ($i = 0; $i < $totalRecords; $i += $batchSize) {
+                $batchIds = $listingIds->slice($i, $batchSize); // Get 200 records for this batch
+
+                // Update bridge_property_images_json
+                DB::table('bridge_property_images_json')
+                    ->whereIn('listing_id', $batchIds)
+                    ->update([
+                        'listing_id' => DB::raw("CASE listing_id " .
+                            implode(" ", array_map(
+                                fn($lid, $lkn) => "WHEN '$lid' THEN '$lkn'",
+                                $batchIds->toArray(),
+                                array_map(fn($lid) => $listingsMap[$lid], $batchIds->toArray())
+                            )) . " END")
+                    ]);
+
+                // Update property_images
+                DB::table('property_images')
+                    ->whereIn('ListingId', $batchIds)
+                    ->update([
+                        'ListingId' => DB::raw("CASE ListingId " .
+                            implode(" ", array_map(
+                                fn($lid, $lkn) => "WHEN '$lid' THEN '$lkn'",
+                                $batchIds->toArray(),
+                                array_map(fn($lid) => $listingsMap[$lid], $batchIds->toArray())
+                            )) . " END")
+                    ]);
+
+                echo "Batch " . ($i / $batchSize + 1) . " updated: " . count($batchIds) . " records processed.\n";
+            }
+
+            DB::commit();
+            echo "All records updated successfully!\n";
+        } catch (\Exception $e) {
+            DB::rollBack();
+            echo "Error: " . $e->getMessage() . "\n";
+        }
+    }
+
 }
 
 

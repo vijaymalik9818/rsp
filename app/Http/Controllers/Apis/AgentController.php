@@ -1287,6 +1287,11 @@ $result = $suggestedAgents->map(function($agent) {
                 'LeaseAmountFrequency',
                 'LeaseAmount'
             )
+            ->whereExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('property_images')
+                    ->whereRaw('property_images.ListingId = properties_all_data.ListingKeyNumeric ');
+            })
             ->where('featured', 1)
             ->orderBy('ModificationTimestamp', 'desc')
             ->take(8)
@@ -1322,6 +1327,11 @@ $result = $suggestedAgents->map(function($agent) {
                 'LeaseAmountFrequency',
                 'LeaseAmount'
             )
+            ->whereExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('property_images')
+                    ->whereRaw('property_images.ListingId = properties_all_data.ListingKeyNumeric ');
+            })
             ->where('diamond', 1)
             ->orderBy('ModificationTimestamp', 'desc')
             ->take(8)
@@ -1422,7 +1432,12 @@ public function getadvanceData(Request $request)
         $paginate = $request->boolean('paginate');
 
         $mapDataQuery = DB::table('properties_all_data')
-            ->select('ListingKeyNumeric', 'Longitude', 'Latitude', 'slug_url', 'StreetName', 'StreetSuffix', 'UnparsedAddress', 'ListPrice', 'image_url', 'City', 'StateOrProvince', 'StreetNumber', 'StreetDirPrefix', 'UnitNumber', 'ListingId');
+            ->select('ListingKeyNumeric', 'Longitude', 'Latitude', 'slug_url', 'StreetName', 'StreetSuffix', 'UnparsedAddress', 'ListPrice', 'image_url', 'City', 'StateOrProvince', 'StreetNumber', 'StreetDirPrefix', 'UnitNumber', 'ListingId')
+            ->whereExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('property_images')
+                    ->whereRaw('property_images.ListingId = properties_all_data.ListingKeyNumeric ');
+            });
 
         $listingDataQuery = DB::table('properties_all_data')
             ->select(
@@ -1462,7 +1477,11 @@ public function getadvanceData(Request $request)
                 // DB::raw("JSON_UNQUOTE(JSON_EXTRACT(OtherColumns, '$.LeaseMeasure')) as LeaseMeasure"),
                 // DB::raw("JSON_UNQUOTE(JSON_EXTRACT(OtherColumns, '$.LeaseAmount')) as LeaseAmount"),
                 // DB::raw("JSON_UNQUOTE(JSON_EXTRACT(OtherColumns, '$.LeaseAmountFrequency')) as LeaseAmountFrequency")
-            );
+            ) ->whereExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('property_images')
+                    ->whereRaw('property_images.ListingId = properties_all_data.ListingKeyNumeric ');
+                });
 
         if ($request->filled('search')) {
             $this->applySearchFilter($request, $mapDataQuery, $listingDataQuery);

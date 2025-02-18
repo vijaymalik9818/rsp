@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Http\Controllers\BridgePropertyController;
 use Illuminate\Console\Command;
 use App\Http\Controllers\RETSController;
 use App\Http\Controllers\importListings\SoldImportlisting;
@@ -39,8 +40,9 @@ class MarkPropertyImages extends Command
      */
     public function handle()
     {
-        $new = new RETSController();
-        $new->updateDownloadedImagesFlag();
+        $new = new BridgePropertyController();
+        $new->updateListingIdsInBatches();
+        // $new->updateDownloadedImagesFlag();
         // $new->DeleteOffRecords();
         // $new = new SoldImportlisting();
         // $new->index();
