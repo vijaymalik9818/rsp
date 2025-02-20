@@ -110,7 +110,7 @@ class RETSController extends Controller
                 
             }
 
-            // $query = '((ListingId=A2116879))';
+            // $query = '((ListingId=A2168549))';
             //$query = '(MlsStatus=A,I,P)';
             //$query = '((MlsStatus=A,I,P),(ModificationTimestamp=2024-09-24T00:00:00+))';
 
@@ -392,7 +392,7 @@ class RETSController extends Controller
                                             $data['image_url'] = $imageUrl;
                                             DB::table('properties_all_data')
                                             ->where('ListingKeyNumeric', $listingId)
-                                            ->update(['is_images_downloaded' => 0]);
+                                            ->update(['images_status' => 0]);
                                         } catch (\Exception $exception) {
                                             Log::error("Failed to save property photo for ListingKeyNumeric {$listingId}: " . $exception->getMessage());
                                             //continue;
@@ -839,7 +839,7 @@ public function retrieveData_ALLNEW()
                                             $data['image_url'] = $imageUrl;
                                             DB::table('properties_all_data')
                                             ->where('ListingKeyNumeric', $listingId)
-                                            ->update(['is_images_downloaded' => 0]);
+                                            ->update(['images_status' => 0]);
                                         } catch (\Exception $exception) {
                                             Log::error("Failed to save property photo for ListingKeyNumeric {$listingId}: " . $exception->getMessage());
                                             //continue;
@@ -1301,7 +1301,7 @@ public function retrieveData_ALLNEW()
             $chunkSize = 100;
 
             $totalPropertiesCount = DB::table('properties_all_data')
-                ->where('is_images_downloaded', 0)
+                ->where('images_status', 0)
                 ->count();
 
             $remainingCount = 300;//$totalPropertiesCount;
@@ -1309,7 +1309,7 @@ public function retrieveData_ALLNEW()
             do {
                 $officeProperties = DB::table('properties_all_data')
                     ->where('mls_type', 0)
-                    ->where('is_images_downloaded', 0)
+                    ->where('images_status', 0)
                     ->orderBy('DOMDate', 'desc')
                     ->limit($chunkSize)
                     ->pluck('ListingKeyNumeric')
@@ -1373,7 +1373,7 @@ public function retrieveData_ALLNEW()
 
                     DB::table('properties_all_data')
                         ->where('ListingKeyNumeric', $listingId)
-                        ->update(['is_images_downloaded' => 1]);
+                        ->update(['images_status' => 1]);
 
                     $remainingCount--;
                 }
@@ -1504,7 +1504,7 @@ public function retrieveData_ALLNEW()
     {
         try {
             // Step 1: Mark all images as not downloaded
-            DB::table('properties_all_data')->update(['is_images_downloaded' => 0]);
+            DB::table('properties_all_data')->update(['images_status' => 0]);
     
             // Step 2: Initialize counters
             $totalProperties = 0;
@@ -1513,7 +1513,7 @@ public function retrieveData_ALLNEW()
     
             // Step 3: Retrieve properties where images are not downloaded
             $properties = DB::table('properties_all_data')
-                ->where('is_images_downloaded', 0)
+                ->where('images_status', 0)
                 ->get(['ListingKeyNumeric']);
     
             $totalProperties = $properties->count();
@@ -1530,7 +1530,7 @@ public function retrieveData_ALLNEW()
                 if ($hasImages) {
                     DB::table('properties_all_data')
                         ->where('ListingKeyNumeric', $listingId)
-                        ->update(['is_images_downloaded' => 1]);
+                        ->update(['images_status' => 1]);
     
                     $markedImages++;
     
@@ -1961,7 +1961,7 @@ public function retrieveData_ALLNEW()
                             //                 $data['image_url'] = $imageUrl;
                             //                 DB::table('properties_all_data')
                             //                 ->where('ListingKeyNumeric', $listingId)
-                            //                 ->update(['is_images_downloaded' => 0]);
+                            //                 ->update(['images_status' => 0]);
                             //             } catch (\Exception $exception) {
                             //                 Log::error("Failed to save property photo for ListingKeyNumeric {$listingId}: " . $exception->getMessage());
                             //                 //continue;

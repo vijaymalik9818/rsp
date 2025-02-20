@@ -41,7 +41,7 @@ class MarkPropertyImages extends Command
     public function handle()
     {
         $new = new BridgePropertyController();
-        $new->updateListingIdsInBatches();
+        $new->updateImagesStatusInBatches();
         // $new->updateDownloadedImagesFlag();
         // $new->DeleteOffRecords();
         // $new = new SoldImportlisting();
