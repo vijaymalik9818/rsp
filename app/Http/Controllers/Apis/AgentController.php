@@ -1935,10 +1935,9 @@ $rawListingDataQuery = $listingDataQuery->toSql();
             // Apply default sorting logic
             $listingDataQuery->orderByRaw("
     CASE 
-        WHEN mls_type = 1 AND featured = 1 THEN 0
+        WHEN featured = 1 THEN 0
         WHEN mls_type = 1 THEN 1
-        WHEN featured = 1 THEN 2
-        ELSE 3 
+        ELSE 2
     END
 ")->orderBy('ModificationTimestamp', 'desc');
 

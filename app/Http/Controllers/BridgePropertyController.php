@@ -705,7 +705,7 @@ class BridgePropertyController extends Controller
                 ],
             ]);
 
-            // Fetch records where is_imported is 1
+            // Fetch records where is_imported is 0 or 1
             $properties = DB::table('bridge_property_images_json')
                 ->where('is_imported', 0)
                 ->orWhere('is_imported', 1)
@@ -725,10 +725,10 @@ class BridgePropertyController extends Controller
                     continue;
                 }
 
-                $skipFirstImage = $lastProcessedIndex == 0; 
+                $skipFirstImage = $lastProcessedIndex == 0;
                 $index = $lastProcessedIndex + 1;
-
                 $downloaded = false;
+                $errorOccurred = false;
 
                 foreach (array_slice($imagesJson, $lastProcessedIndex) as $imageUrl) {
                     if ($skipFirstImage) {
@@ -737,7 +737,15 @@ class BridgePropertyController extends Controller
                     }
 
                     try {
-                        $imageContent = file_get_contents($imageUrl);
+                        // $imageContent = file_get_contents($imageUrl);
+                        $imageContent = $this->fetchImageWithCurl($imageUrl);
+
+
+                        // Check if file_get_contents failed
+                        if ($imageContent === false) {
+                            throw new \Exception("Failed to download image from URL: {$imageUrl}");
+                        }
+
                         $filename = "photo-{$listingId}-{$index}.jpeg";
                         $result = $s3->putObject([
                             'Bucket' => env('AWS_BUCKET'),
@@ -765,28 +773,34 @@ class BridgePropertyController extends Controller
                         DB::table('bridge_property_images_json')
                             ->where('listing_id', $listingId)
                             ->update(['last_processed_index' => $index]);
-                            $downloaded = true;
 
-                            $index++;
+                        $downloaded = true;
+                        $index++;
                     } catch (\Exception $e) {
                         echo "Error processing image for ListingId {$listingId} at Index {$index}: {$e->getMessage()}" . PHP_EOL;
-                        continue;
+                        $errorOccurred = true;
+                        break;
                     }
                 }
 
-                if ($downloaded) {
-                    // Update images_status in properties_all_data where ListingKeyNumeric matches listing_id
-                    DB::table('properties_all_data')
-                        ->where('ListingKeyNumeric', $listingId)
-                        ->update(['images_status' => 1]);
+                // Only update is_imported to 2 if no error occurred
+                if (!$errorOccurred) {
+                    if ($downloaded) {
+                        // Update images_status in properties_all_data where ListingKeyNumeric matches listing_id
+                        DB::table('properties_all_data')
+                            ->where('ListingKeyNumeric', $listingId)
+                            ->update(['images_status' => 1]);
+                    }
+
+                    // Update the is_imported status to 2 for the processed listing_id
+                    DB::table('bridge_property_images_json')
+                        ->where('listing_id', $listingId)
+                        ->update(['is_imported' => 2]);
+
+                    echo "TotalProperties: {$totalPropertiesCount} :: Remaining: {$remainingCount} :: Downloaded for ListingId {$listingId}" . PHP_EOL;
+                } else {
+                    echo "Error occurred for ListingId {$listingId}. is_imported not set to 2." . PHP_EOL;
                 }
-
-                // Update the is_imported status to 2 for the processed listing_id
-                DB::table('bridge_property_images_json')
-                    ->where('listing_id', $listingId)
-                    ->update(['is_imported' => 2]);
-
-                echo "TotalProperties: {$totalPropertiesCount} :: Remaining: {$remainingCount} :: Downloaded for ListingId {$listingId}" . PHP_EOL;
 
                 $remainingCount--;
             }
@@ -797,6 +811,7 @@ class BridgePropertyController extends Controller
             echo "Error: {$e->getMessage()}" . PHP_EOL;
         }
     }
+
 
 
     public function checkSoldAndRemoveSold()
@@ -841,7 +856,7 @@ class BridgePropertyController extends Controller
 
         $offset = 0;
         for ($i = 0; $offset < $totalCount; $i++, $offset += $batchSize) {
-            $currUrl = $baseUrl . "?access_token=$accessToken&fields=ListingId&limit=$batchSize&offset=$offset";
+            $currUrl = $baseUrl . "?access_token=$accessToken&fields=ListingKeyNumeric&limit=$batchSize&offset=$offset";
             echo "Fetching batch " . ($i + 1) . ": $currUrl\n";
 
             $response = $this->makeCurlRequest($currUrl, $accessToken);
@@ -853,9 +868,10 @@ class BridgePropertyController extends Controller
             $data = $response['bundle'];
 
 
+
             foreach ($data as $listing) {
-                if (!empty($listing['ListingId'])) {
-                    $processedListingIds[] = $listing['ListingId'];
+                if (!empty($listing['ListingKeyNumeric'])) {
+                    $processedListingIds[] = $listing['ListingKeyNumeric'];
                 }
             }
         }
@@ -869,7 +885,7 @@ class BridgePropertyController extends Controller
                 ->delete();
 
             DB::table('properties_all_data')
-                ->whereNotIn('ListingId', $processedListingIds)
+                ->whereNotIn('ListingKeyNumeric', $processedListingIds)
                 ->where('mls_type', 1)
                 ->delete();
 
@@ -1002,6 +1018,89 @@ class BridgePropertyController extends Controller
 
         echo "Update Completed. Total Records Processed: $totalRecords\n";
     }
+
+
+    public function fetchMediaForListings()
+    {
+        $accessToken = env('BRIDGE_ACCESS_TOKEN');
+        $baseUrl = env('BRIDGE_LOGIN_URL'); // Base URL without /media
+    
+        // Get ListingKeyNumeric where mls_type = 1 and images_status = 0
+        $listings = DB::table('properties_all_data')
+            ->where('mls_type', 1)
+            ->where('images_status', 0)
+            ->pluck('ListingKeyNumeric');
+    
+        if ($listings->isEmpty()) {
+            echo "No listings found with mls_type = 1 and images_status = 0.\n";
+            return;
+        }
+    
+        echo "Processing " . count($listings) . " listings.\n";
+    
+        foreach ($listings as $listingKeyNumeric) {
+            $mediaUrl = $baseUrl . "?access_token=$accessToken&ListingKeyNumeric=$listingKeyNumeric&fields=ListingKeyNumeric,Media";
+            echo "Fetching media for ListingKeyNumeric: $listingKeyNumeric\n";
+    
+            $response = $this->makeCurlRequest($mediaUrl, $accessToken);
+    
+            if (!$response || !isset($response['bundle'])) {
+                echo "No media found or error fetching media for ListingKeyNumeric: $listingKeyNumeric\n";
+                continue;
+            }
+    
+            $mediaUrls = [];
+            $firstImageUrl = null;
+    
+            foreach ($response['bundle'] as $item) {
+                if (isset($item['Media']) && is_array($item['Media'])) {
+                    foreach ($item['Media'] as $index => $media) {
+                        if (isset($media['MediaURL'])) {
+                            if ($index == 0 && !$firstImageUrl) {
+                                $firstImageUrl = $media['MediaURL'];
+                            }
+                            $mediaUrls[] = $media['MediaURL'];
+                        }
+                    }
+                }
+            }
+    
+            if (empty($mediaUrls)) {
+                echo "No Media URLs found for ListingKeyNumeric: $listingKeyNumeric\n";
+                continue;
+            }
+    
+            $imagesJson = json_encode($mediaUrls);
+    
+            $existingMediaRecord = DB::table('bridge_property_images_json')
+                ->where('listing_id', $listingKeyNumeric)
+                ->first();
+    
+            if ($existingMediaRecord) {
+                DB::table('bridge_property_images_json')
+                    ->where('listing_id', $listingKeyNumeric)
+                    ->update([
+                        'images_json' => $imagesJson,
+                        'updated_at' => now(),
+                    ]);
+                echo "Media for ListingKeyNumeric $listingKeyNumeric updated.\n";
+            } else {
+                DB::table('bridge_property_images_json')->insert([
+                    'listing_id' => $listingKeyNumeric,
+                    'images_json' => $imagesJson,
+                    'is_imported' => 0,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                echo "Media for ListingKeyNumeric $listingKeyNumeric inserted.\n";
+            }
+        }
+    
+        echo "Media fetching and storing process completed.\n";
+    }
+    
+    
+
 
 
 
